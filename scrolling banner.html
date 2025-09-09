@@ -1,0 +1,116 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>Scrolling Banner with Expiry</title>
+  <style>
+	body { margin: 0; font-family: sans-serif; }
+
+	.banner {
+	  width: 100%;
+	  overflow: hidden;
+	  white-space: nowrap;
+	  box-sizing: border-box;
+	  background: #222;
+	  color: #fff;
+	  padding: 14px;
+	  cursor: pointer;
+
+	  position: fixed;   /* keep always visible */
+	  top: 0;
+	  left: 0;
+	  z-index: 10000;    /* stay on top */
+	  font-size: clamp(22px, 6vw, 32px); /* bigger base, scales with screen */
+	}
+
+	.banner p {
+	  display: inline-block;
+	  padding-left: 100%;
+	  animation: scroll 10s linear infinite;
+	  margin: 0;
+	}
+
+	.banner:hover p {
+	  animation-play-state: paused;
+	}
+
+	@media (prefers-reduced-motion: reduce) {
+	  .banner p {
+		animation: none !important;
+		transform: translateX(0) !important;
+	  }
+	}
+
+	@keyframes scroll {
+	  0% { transform: translateX(0); }
+	  100% { transform: translateX(-100%); }
+	}
+
+  </style>
+</head>
+<body>
+  <div id="banner" class="banner"></div>
+
+  <script>
+    const fallbackMessages = [
+		"Classes running at Moseley, Bournville, Handsworth. Click here for details"
+    ];
+
+    async function loadMessages() {
+      const url = 'https://crack-haddock.github.io/YE_banner_text/banner_text.json?cachebust=' + Date.now();
+      let data;
+
+      try {
+        const res = await fetch(url, { cache: 'no-store' });
+        if (!res.ok) throw new Error(res.status + " " + res.statusText);
+        data = await res.json();
+      } catch (e) {
+        console.error(`Banner fetch error: ${e.message}. Using fallback messages.`);
+        data = { messages: fallbackMessages, expiry: null };
+      }
+
+      // Check expiry
+      const expiry = data.expiry ? new Date(data.expiry).getTime() : null;
+      const now = Date.now();
+
+      const banner = document.getElementById('banner');
+
+      if (expiry && now > expiry) {
+        banner.style.display = 'none';
+        return;
+      }
+
+      // Use messages from JSON or fallback
+      const msgs = data.messages && data.messages.length ? data.messages : fallbackMessages;
+
+      let i = 0;
+
+      function showMessage() {
+        const p = document.createElement('p');
+        p.textContent = msgs[i];
+        banner.innerHTML = '';
+        banner.appendChild(p);
+        i = (i + 1) % msgs.length;
+      }
+
+      showMessage();
+      setInterval(showMessage, 15000); // match scroll duration
+
+      // Make banner clickable
+      banner.addEventListener('click', () => {
+        window.location.href = 'https://birminghamcentral.youngengineers.org/location-and-program/';
+      });
+    }
+
+    loadMessages();
+
+    // Prevent banner from covering content
+    window.addEventListener("load", () => {
+      const banner = document.getElementById("banner");
+      if (banner && banner.offsetHeight) {
+        document.body.style.paddingTop = banner.offsetHeight + "px";
+      }
+    });
+  </script>
+</body>
+</html>
